@@ -16,6 +16,15 @@ This repository contains the complete mathematical models, synthetic simulations
 
 Large language models (LLMs) can raise visible task performance while weakening durable human mastery – a phenomenon we call **hollow performance**. This paper formalises two linked models:
 
+## Collapse Transition Around 7.5% Blind Trust
+
+The animation below shows stochastic simulations for increasing blind trust levels (0% to 50%).  
+The red dashed line marks the collapse threshold (K = 0.1). At **7.5%** trust, mastery drops below the line – the system enters a hollow performance equilibrium.
+
+![Granular trust transition](figures/granular_trust_animation.gif)
+
+*Figure: Time evolution of mean mastery (left) and final equilibrium mastery (right) for each trust level. The highlighted orange bar in the right panel shows the current trust level. The transition from stable (K > 0.1) to collapsed (K < 0.1) occurs sharply around 7.5%.*
+
 1. **Simple risk model** of unverified delegation:  
    $r = D(1-V)$, with safety boundary $D(1-V) < \frac{1}{1+\kappa}$.
 
