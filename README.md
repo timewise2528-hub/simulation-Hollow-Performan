@@ -65,7 +65,33 @@ All equations are implemented in [`src/hollow_performance.py`](src/hollow_perfor
 - **Passive offloading** loss: $\phi A_t (1-P_t)(1-B_t)$
 
 ## Repository Structure
+hollow-performance/
+├── README.md                    # This file
+├── requirements.txt             # Python dependencies
+├── src/
+│   └── hollow_performance.py    # Core model class
+├── simulations/
+│   ├── run_all.py               # Reproduce all four simulations + figures
+│   ├── dynamic_run.py           # Interactive parameter sweeps
+│   └── data/                    # Generated synthetic datasets (CSV)
+├── notebooks/
+│   └── explore.ipynb            # Jupyter notebook for step‑by‑step exploration
+├── figures/                     # Pre‑generated figures (PNG, GIF)
+│   ├── sim1_deterministic.png
+│   ├── sim2_fixed_trust.png
+│   ├── sim3_random_trust.png
+│   ├── sim4_stochastic.png
+│   └── animation_*.gif
+└── tests/
+    └── test_model.py            # Unit tests for equations
 
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/USERNAME/hollow-performance-llm-dependence.git
+cd hollow-performance-llm-dependence
 ## Getting Started
 
 ### 1. Clone the repository
