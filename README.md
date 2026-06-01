@@ -4,7 +4,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 **Authors**: Ramesh Neupane  
-**Repository**: [https://github.com/USERNAME/hollow-performance-llm-dependence](https://github.com/USERNAME/hollow-performance-llm-dependence)  
+**Repository**: [https://github.com/timewise2528-hub/simulation-Hollow-Performan]  
 **ORCID**:  0000-0001-5275-8735
 
 This repository contains the complete mathematical models, synthetic simulations, and visualisation code for the paper:
@@ -85,13 +85,6 @@ hollow-performance/
 └── tests/
     └── test_model.py            # Unit tests for equations
 
-## Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/USERNAME/hollow-performance-llm-dependence.git
-cd hollow-performance-llm-dependence
 ## Getting Started
 
 ### 1. Clone the repository
