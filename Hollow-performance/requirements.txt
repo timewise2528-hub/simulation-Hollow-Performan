@@ -1,0 +1,6 @@
+nbformat
+nbclient
+numpy
+matplotlib
+pytest
+nbval
