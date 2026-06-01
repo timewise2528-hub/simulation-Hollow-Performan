@@ -5,7 +5,7 @@
 
 **Authors**: Ramesh Neupane  
 **Repository**: [https://github.com/USERNAME/hollow-performance-llm-dependence](https://github.com/USERNAME/hollow-performance-llm-dependence)  
-**DOI**: [placeholder]  
+**ORCID**:  0000-0001-5275-8735
 
 This repository contains the complete mathematical models, synthetic simulations, and visualisation code for the paper:
 
