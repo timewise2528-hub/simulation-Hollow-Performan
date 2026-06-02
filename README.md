@@ -12,19 +12,6 @@ This repository contains the complete mathematical models, synthetic simulations
 > *Hollow Performance: A Closed-Loop Learning Theory of Human–AI Dependence*  
 > *Mathematical Models, Synthetic Simulations, and Implications for Education, Health, Knowledge Work, and Society*
 >
-> ## Mathematical Model-2 of Hollow Performance[simple version]
-
-The animation below implements the simplified model described in the paper. It shows:
-
-- **Left panel**: Time evolution of mastery \(K_t\) (blue) and observed performance \(Y_t\) (red) as delegation \(D\) increases from 0 to 1.
-- **Right panel**: Equilibrium mastery \(K^*(D)\) with a moving marker for the current \(D\).
-- **Equations**: The three core equations of the model.
-
-At \(D \approx 0.075\) (7.5% delegation), mastery collapses below 0.1 while performance stays near 0.9 – the hollow performance regime.
-
-![Hollow model animation](figures/hollow_model_animation.gif)
-
-*Figure: Animation showing the transition from safe to hollow performance as AI delegation increases. The red dashed line marks the collapse threshold (K=0.1).*
 
 ## Abstract
 
@@ -48,6 +35,20 @@ The red dashed line marks the collapse threshold (K = 0.1). At **7.5%** trust, m
    $L_t = \eta(1-K_t)Q_t\,G(P_t,F_t,J_t,B_t)\exp\!\left(-\frac{\lambda\tau}{1+\rho S_t}\right)$.
 
 Synthetic simulations show that blind AI substitution can keep $Y_t \approx 0.97$ while $K_t \to 0$. The code reproduces all simulations and figures from the paper.
+
+> ## Mathematical Model-2 of Hollow Performance[simple version]
+
+The animation below implements the simplified model described in the paper. It shows:
+
+- **Left panel**: Time evolution of mastery \(K_t\) (blue) and observed performance \(Y_t\) (red) as delegation \(D\) increases from 0 to 1.
+- **Right panel**: Equilibrium mastery \(K^*(D)\) with a moving marker for the current \(D\).
+- **Equations**: The three core equations of the model.
+
+At \(D \approx 0.075\) (7.5% delegation), mastery collapses below 0.1 while performance stays near 0.9 – the hollow performance regime.
+
+![Hollow model animation](figures/hollow_model_animation.gif)
+
+*Figure: Animation showing the transition from safe to hollow performance as AI delegation increases. The red dashed line marks the collapse threshold (K=0.1).*
 
 ## Mathematical Models & Code Mapping
 
