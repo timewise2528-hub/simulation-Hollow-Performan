@@ -46,7 +46,7 @@ The animation below implements the simplified model described in the paper. It s
 
 At \(D \approx 0.075\) (7.5% delegation), mastery collapses below 0.1 while performance stays near 0.9 – the hollow performance regime.
 
-![Hollow model animation](figures/hollow_model_animation.gif)
+![Hollow model animation](hollow_model_animation_domain_thresholds.gif)
 
 *Figure: Animation showing the transition from safe to hollow performance as AI delegation increases. The red dashed line marks the collapse threshold (K=0.1).*
 
