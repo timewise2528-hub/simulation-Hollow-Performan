@@ -63,6 +63,12 @@ Using this, we derive the delegation \(D\) at which mastery falls below critical
 > **Note:** In this simplified model, **true hollow performance** (observed performance \(Y > 0.8\) while mastery \(K < 0.1\)) requires delegation \(D > 78\%\). The paper’s full model, however, shows collapse already at \(D \approx 7.5\%\) for high‑stakes domains due to additional mechanisms (separate forgetting, degraded learning‑loop, offloading loss). Thus the simplified model is a pedagogical tool; policy recommendations should rely on the full model.
 
 See the animation `hollow_model_animation_domain_thresholds.gif` for a visual sweep of these thresholds.
+
+## Education simulation (20 years, 350 students)
+
+![Highly scaffolded education](education_highly_scaffolded_20years_350students.gif)
+
+*Mean mastery decays slowly; collapse probability ≈ 97%+ after 5 years.*
 ## Mathematical Models & Code Mapping
 
 All equations are implemented in [`src/hollow_performance.py`](src/hollow_performance.py). The table below maps each mathematical component to the corresponding method.
