@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-### Reference code for paper: ENJOY ! 🤗
+### Main reference code for paper: Main_simulation_notebook_v1 and v2: ENJOY ! 🤗
 **Authors**: Ramesh Neupane  
 **Repository**: [https://github.com/timewise2528-hub/simulation-Hollow-Performan]  
 **ORCID**:  0000-0001-5275-8735
