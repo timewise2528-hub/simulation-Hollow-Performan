@@ -49,7 +49,20 @@ At \(D \approx 0.075\) (7.5% delegation), mastery collapses below 0.1 while perf
 ![Hollow model animation](hollow_model_animation_domain_thresholds.gif)
 
 *Figure: Animation showing the transition from safe to hollow performance as AI delegation increases. The red dashed line marks the collapse threshold (K=0.1).*
+## Domain‑Specific Collapse Thresholds (Simplified Model)
 
+The simplified model gives the equilibrium mastery \(K^* = \frac{\eta(1-D)}{\eta(1-D)+\phi D}\) with \(\eta=0.1\), \(\phi=1.5\).  
+Using this, we derive the delegation \(D\) at which mastery falls below critical levels for different domains:
+
+| Domain | Mastery threshold \(K^* <\) | Delegation \(D\) (blind trust) | Observed performance \(Y\) at that \(D\) | Hollow performance? |
+|--------|------------------------------|--------------------------------|------------------------------------------|---------------------|
+| **Education** | 0.5 (unaided exam competence) | **6.25%** | 0.53 | No (Y < 0.8) |
+| **Knowledge work** | 0.3 (audit & error detection) | **13.5%** | 0.39 | No |
+| **High‑stakes (health, law)** | 0.1 (safety margin) | **37.5%** | 0.44 | No |
+
+> **Note:** In this simplified model, **true hollow performance** (observed performance \(Y > 0.8\) while mastery \(K < 0.1\)) requires delegation \(D > 78\%\). The paper’s full model, however, shows collapse already at \(D \approx 7.5\%\) for high‑stakes domains due to additional mechanisms (separate forgetting, degraded learning‑loop, offloading loss). Thus the simplified model is a pedagogical tool; policy recommendations should rely on the full model.
+
+See the animation `hollow_model_animation_domain_thresholds.gif` for a visual sweep of these thresholds.
 ## Mathematical Models & Code Mapping
 
 All equations are implemented in [`src/hollow_performance.py`](src/hollow_performance.py). The table below maps each mathematical component to the corresponding method.
