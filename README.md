@@ -133,5 +133,5 @@ hollow-performance/
 ### 1. Clone the repository
 
 ```bash
-git clone **https://github.com/USERNAME/hollow-performance-llm-dependence.git**
-cd hollow-performance-llm-dependence
+git clone https://github.com/timewise2528-hub/simulation-Hollow-Performan.git
+cd simulation-Hollow-Performan
