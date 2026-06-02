@@ -72,6 +72,7 @@ See the animation `hollow_model_animation_domain_thresholds.gif` for a visual sw
 ## Mathematical Models & Code Mapping
 
 All equations are implemented in [`src/hollow_performance.py`](src/hollow_performance.py). The table below maps each mathematical component to the corresponding method.
+**H (Hollow performance) = A(1-K)** [look in the paper appendix-2 for derivation]
 
 | Mathematical symbol | Description | Code method |
 |---------------------|-------------|--------------|
