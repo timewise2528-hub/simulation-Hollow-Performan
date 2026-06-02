@@ -72,7 +72,7 @@ See the animation `hollow_model_animation_domain_thresholds.gif` for a visual sw
 ## Mathematical Models & Code Mapping
 
 All equations are implemented in [`src/hollow_performance.py`](src/hollow_performance.py). The table below maps each mathematical component to the corresponding method.
-**H (Hollow performance) = A(1-K)** [look in the paper appendix-2 for derivation]
+
 
 | Mathematical symbol | Description | Code method |
 |---------------------|-------------|--------------|
@@ -85,6 +85,8 @@ All equations are implemented in [`src/hollow_performance.py`](src/hollow_perfor
 | $\delta_{\text{forget}} = \delta_{\text{forget}} \cdot K_t$ | Forgetting | `forget_loss(K)` |
 | $K_{t+1} = K_t + L_t - \delta_{\text{off}} - \delta_{\text{forget}}$ | Mastery update | `mastery_update(K, L, off, forget)` |
 | $D(1-V) < \frac{1}{1+\kappa}$ | Safe risk boundary | `risk_boundary(kappa)` (static) |
+
+**H (Hollow performance) = A(1-K)** [look in the paper appendix-2 for derivation]
 
 ### Simple Risk Model
 
