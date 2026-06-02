@@ -32,7 +32,7 @@ The red dashed line marks the collapse threshold (K = 0.1). At **7.5%** trust, m
 2. **First‑principles dynamic model** separating observed performance $Y_t$ from human mastery $K_t$:  
    $Y_t = 1-(1-K_t)(1-A_t)$,  
    and durable learning  
-   $L_t = \eta(1-K_t)Q_t\,G(P_t,F_t,J_t,B_t)\e^\left(-\frac{\lambda\tau}{1+\rho S_t}\right)$.
+   $L_t = \eta(1-K_t)Q_t\,G(P_t,F_t,J_t,B_t)e^\left(-\frac{\lambda\tau}{1+\rho S_t}\right)$.
 
 Synthetic simulations show that blind AI substitution can keep $Y_t \approx 0.97$ while $K_t \to 0$. The code reproduces all simulations and figures from the paper.
 
