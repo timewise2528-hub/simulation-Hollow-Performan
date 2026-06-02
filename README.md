@@ -1,4 +1,4 @@
-# Hollow Performance: A Closed-Loop Learning Theory of Human–AI Dependence
+# HOLLOW PERFORMANCE: MASTERY EROSION IN THE AGE OF DELEGATED COGNITION
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
