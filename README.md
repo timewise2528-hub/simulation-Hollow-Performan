@@ -43,7 +43,7 @@ This repository contains the complete mathematical models, synthetic simulations
 Large language models (LLMs) can raise visible task performance while weakening durable human mastery – a phenomenon we call **hollow performance**. This paper formalises two linked models:
 
 1. **Simple risk model** of unverified delegation  
-2. **First‑principles dynamic model** separating observed performance $Y_t$ from human mastery $K_t$
+2. **Dynamic model** separating observed performance $Y_t$ from human mastery $K_t$
 
 Synthetic simulations show that blind AI substitution can keep $Y_t \approx 0.97$ while $K_t \to 0$. The code reproduces all simulations and figures from the paper.
 
