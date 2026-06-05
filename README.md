@@ -58,7 +58,7 @@ The red dashed line marks the collapse threshold ($K = 0.1$). At **7.5%** trust,
 
 ![Granular trust transition](figures/granular_trust_animation.gif)
 
-*Figure: Time evolution of mean mastery (left) and final equilibrium mastery (right) for each trust level. The highlighted orange bar in the right panel shows the current trust level. The transition from stable ($K > 0.1$) to collapsed ($K < 0.1$) occurs sharply around 7.5%.*
+*Figure: Time evolution of mean mastery (left) and final equilibrium mastery (right) for each trust level. The highlighted orange bar in the right panel shows the current trust level. The transition from stable (K > 0.1) to collapsed (K < 0.1) occurs sharply around 7.5%.*
 
 ---
 
