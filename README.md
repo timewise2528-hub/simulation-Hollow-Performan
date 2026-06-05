@@ -100,7 +100,7 @@ See the animation `hollow_model_animation_domain_thresholds.gif` for a visual sw
 
 ![Highly scaffolded education](education_highly_scaffolded_20years_350students.gif)
 
-*Mean mastery decays slowly; collapse probability ≈ 97%+ in ~10 years.*
+*Mean mastery decays slowly; within 5 years, average mastery will be half and within 10 years collapse probability ≈ 97%*
 
 ---
 
