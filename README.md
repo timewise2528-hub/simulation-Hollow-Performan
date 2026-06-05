@@ -2,10 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Research Paper](https://img.shields.io/badge/arXiv-Pending-red.svg)](https://github.com/timewise2528-hub/simulation-Hollow-Performan)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-**Authors**: Ramesh Neupane  
+**Authors**: Ramesh Neupane, Sr. Data Scientist  
 **Repository**: [https://github.com/timewise2528-hub/simulation-Hollow-Performan](https://github.com/timewise2528-hub/simulation-Hollow-Performan)  
 **ORCID**: [0000-0001-5275-8735](https://orcid.org/0000-0001-5275-8735)
 
