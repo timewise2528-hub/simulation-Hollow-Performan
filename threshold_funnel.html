@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threshold Convergence Funnel (95% Interval) — Hollow Intelligence</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            background:#0b0f19; display:flex; justify-content:center; align-items:center;
+            height:100vh; overflow:hidden;
+            font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+        }
+        canvas{display:block; max-width:100vw; max-height:100vh;}
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <script>
+        (()=>{
+            const canvas=document.getElementById('c');
+            const ctx=canvas.getContext('2d');
+            const BASE_W=1100, BASE_H=700;
+            let scale=1;
+            function resize(){
+                const dpr=Math.min(devicePixelRatio||1,2);
+                const aw=innerWidth, ah=innerHeight, a=BASE_W/BASE_H;
+                let w,h;
+                if(aw/ah>a){h=ah;w=h*a;}else{w=aw;h=w/a;}
+                scale=w/BASE_W; canvas.width=BASE_W*dpr; canvas.height=BASE_H*dpr;
+                canvas.style.width=w+'px'; canvas.style.height=h+'px';
+                ctx.setTransform(dpr,0,0,dpr,0,0);
+            }
+            window.addEventListener('resize',resize); resize();
+
+            // Layout
+            const LEFT_BOX = {x:60, y:160, w:260, h:260};
+            const RIGHT_AXIS = {x:570, y:160, w:480, h:280};
+            const AXIS_MIN = 5.0;
+            const AXIS_MAX = 16.0;
+            const N_PARTICLES = 180;
+
+            const MEAN_R = 10.76;
+            const SD_R = 2.05;
+            const INTERVAL_LOW = 6.75;
+            const INTERVAL_HIGH = 14.78;
+
+            const STATE = { IDLE:0, MOVING:1, SETTLED:2 };
+            let particles = [];
+            let animPhase = 0;
+            let cycleDuration = 9.0;
+            let lastTime = null;
+            let insideInterval = 0;
+            let totalSettled = 0;
+            let meanThreshold = 0;
+            let safeLimit = 0;
+
+            function gaussianRandom(mean=0, stdev=1) {
+                let u = 1 - Math.random();
+                let v = Math.random();
+                let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                return z * stdev + mean;
+            }
+
+            function generateParticle(){
+                const D = 0.2 + Math.random()*0.7;
+                const eta = 0.05 + Math.random()*0.30;
+                let rStar = gaussianRandom(MEAN_R, SD_R);
+                rStar = Math.max(3.5, Math.min(17.5, rStar));
+                return {D, eta, rStar};
+            }
+
+            function resetSimulation(){
+                particles = [];
+                totalSettled = 0;
+                insideInterval = 0;
+                const rawParticles = [];
+                for(let i=0;i<N_PARTICLES;i++) rawParticles.push(generateParticle());
+                rawParticles.sort((a,b)=>a.rStar - b.rStar);
+                const bandHeight = RIGHT_AXIS.h * 0.75;
+                const bandY0 = RIGHT_AXIS.y + (RIGHT_AXIS.h - bandHeight)/2;
+                for(let i=0;i<N_PARTICLES;i++){
+                    const p = rawParticles[i];
+                    const startX = LEFT_BOX.x + (p.D - 0.2)/0.7 * LEFT_BOX.w;
+                    const startY = LEFT_BOX.y + LEFT_BOX.h - (p.eta - 0.05)/0.30 * LEFT_BOX.h;
+                    const tX = RIGHT_AXIS.x + (p.rStar - AXIS_MIN)/(AXIS_MAX - AXIS_MIN) * RIGHT_AXIS.w;
+                    const tY = bandY0 + (i/(N_PARTICLES-1)) * bandHeight;
+                    const hue = 200 + (p.rStar - 6) * 12;
+                    particles.push({
+                        ...p,
+                        sx:startX, sy:startY,
+                        tx:tX, ty:tY,
+                        x:startX, y:startY,
+                        state:STATE.IDLE,
+                        delay: Math.random()*0.4,
+                        color: `hsl(${Math.min(280, Math.max(200, hue))}, 70%, 65%)`
+                    });
+                }
+                const allR = rawParticles.map(p=>p.rStar).sort((a,b)=>a-b);
+                meanThreshold = allR.reduce((s,v)=>s+v,0)/allR.length;
+                const idx2p5 = Math.floor(allR.length*0.025);
+                safeLimit = allR[idx2p5];
+            }
+
+            resetSimulation();
+
+            function update(dt){
+                animPhase += dt / cycleDuration;
+                if(animPhase >= 1.0){
+                    animPhase -= 1.0;
+                    resetSimulation();
+                }
+
+                const moveStart = 0.15;
+                const moveEnd = 0.75;
+                particles.forEach(p => {
+                    if(p.state === STATE.SETTLED) return;
+                    const localPhase = Math.max(0, Math.min(1, (animPhase - moveStart) / (moveEnd - moveStart)));
+                    if(localPhase <= 0) {
+                        p.state = STATE.IDLE;
+                        p.x = p.sx; p.y = p.sy;
+                    } else if(localPhase >= 1) {
+                        if(p.state !== STATE.SETTLED){
+                            p.state = STATE.SETTLED;
+                            p.x = p.tx; p.y = p.ty;
+                            totalSettled++;
+                            if(p.rStar >= INTERVAL_LOW && p.rStar <= INTERVAL_HIGH) insideInterval++;
+                        }
+                    } else {
+                        p.state = STATE.MOVING;
+                        const t = localPhase<0.5 ? 2*localPhase*localPhase : 1 - Math.pow(-2*localPhase+2,2)/2;
+                        p.x = p.sx + (p.tx - p.sx) * t;
+                        const arc = Math.sin(localPhase * Math.PI) * 70;
+                        p.y = p.sy + (p.ty - p.sy) * localPhase - arc * (1-localPhase);
+                    }
+                });
+            }
+
+            function draw(){
+                const W=BASE_W, H=BASE_H;
+                ctx.clearRect(0,0,W,H);
+                const bgGrad=ctx.createRadialGradient(W/2,H*0.4,20,W/2,H*0.4,W);
+                bgGrad.addColorStop(0,'#1a1f2e'); bgGrad.addColorStop(0.8,'#0d1117'); bgGrad.addColorStop(1,'#06090d');
+                ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+
+                ctx.fillStyle='#E8ECF1';
+                ctx.font='600 28px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.textAlign='center';
+                ctx.fillText('Why the Collapse Threshold is Always ~7–15%', W*0.50, H*0.08);
+                ctx.fillStyle='#8899B4';
+                ctx.font='400 15px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.fillText('Diverse parameter combinations funnel into a narrow 95% prediction interval', W*0.50, H*0.125);
+
+                // Left box
+                ctx.fillStyle='rgba(20,26,40,0.7)';
+                ctx.strokeStyle='rgba(255,255,255,0.1)';
+                ctx.lineWidth=1;
+                ctx.beginPath(); ctx.rect(LEFT_BOX.x, LEFT_BOX.y, LEFT_BOX.w, LEFT_BOX.h); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#CCD6E0'; ctx.font='600 14px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.fillText('Parameter Space', LEFT_BOX.x+LEFT_BOX.w/2, LEFT_BOX.y-10);
+                ctx.font='400 12px';
+                ctx.fillText('Delegation D →', LEFT_BOX.x+LEFT_BOX.w/2, LEFT_BOX.y+LEFT_BOX.h+20);
+                ctx.save();
+                ctx.translate(LEFT_BOX.x-20, LEFT_BOX.y+LEFT_BOX.h/2);
+                ctx.rotate(-Math.PI/2);
+                ctx.fillText('Learning rate η →', 0, 0);
+                ctx.restore();
+                ctx.fillStyle='#8899B4';
+                for(let v=0.2; v<=0.9; v+=0.2){
+                    const x = LEFT_BOX.x + (v/0.9)*LEFT_BOX.w;
+                    ctx.fillText(v.toFixed(1), x, LEFT_BOX.y+LEFT_BOX.h+14);
+                }
+
+                // Right axis
+                ctx.fillStyle='rgba(20,26,40,0.7)';
+                ctx.strokeStyle='rgba(255,255,255,0.1)';
+                ctx.beginPath(); ctx.rect(RIGHT_AXIS.x, RIGHT_AXIS.y, RIGHT_AXIS.w, RIGHT_AXIS.h); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#CCD6E0'; ctx.font='600 14px';
+                ctx.fillText('Collapse Threshold r* (%)', RIGHT_AXIS.x+RIGHT_AXIS.w/2, RIGHT_AXIS.y-10);
+                for(let v=AXIS_MIN; v<=AXIS_MAX; v+=1){
+                    const x = RIGHT_AXIS.x + (v-AXIS_MIN)/(AXIS_MAX-AXIS_MIN)*RIGHT_AXIS.w;
+                    ctx.fillStyle='#8899B4'; ctx.font='11px'; ctx.fillText(v.toFixed(0)+'%', x, RIGHT_AXIS.y+RIGHT_AXIS.h+18);
+                    ctx.strokeStyle='rgba(255,255,255,0.04)';
+                    ctx.beginPath(); ctx.moveTo(x, RIGHT_AXIS.y); ctx.lineTo(x, RIGHT_AXIS.y+RIGHT_AXIS.h); ctx.stroke();
+                }
+
+                // Highlight 95% interval
+                const lowX = RIGHT_AXIS.x + (INTERVAL_LOW - AXIS_MIN)/(AXIS_MAX-AXIS_MIN)*RIGHT_AXIS.w;
+                const highX = RIGHT_AXIS.x + (INTERVAL_HIGH - AXIS_MIN)/(AXIS_MAX-AXIS_MIN)*RIGHT_AXIS.w;
+                ctx.fillStyle = 'rgba(255,235,150,0.08)';
+                ctx.fillRect(lowX, RIGHT_AXIS.y, highX-lowX, RIGHT_AXIS.h);
+                ctx.strokeStyle = 'rgba(240,192,96,0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4,4]);
+                ctx.beginPath(); ctx.moveTo(lowX, RIGHT_AXIS.y); ctx.lineTo(lowX, RIGHT_AXIS.y+RIGHT_AXIS.h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(highX, RIGHT_AXIS.y); ctx.lineTo(highX, RIGHT_AXIS.y+RIGHT_AXIS.h); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#F0C060'; ctx.font = 'bold 12px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.fillText('95% interval', (lowX+highX)/2, RIGHT_AXIS.y-14);
+
+                // Draw particles
+                particles.forEach(p => {
+                    if(p.state === STATE.IDLE && animPhase < 0.2) {
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 2*Math.PI); ctx.fill();
+                    } else if(p.state === STATE.MOVING) {
+                        ctx.shadowColor = p.color; ctx.shadowBlur = 10;
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 2*Math.PI); ctx.fill();
+                        ctx.shadowBlur = 0;
+                        ctx.strokeStyle = p.color.replace('65%','25%');
+                        ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(p.x, p.y); ctx.stroke();
+                    } else if(p.state === STATE.SETTLED) {
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath(); ctx.arc(p.tx, p.ty, 2.8, 0, 2*Math.PI); ctx.fill();
+                    }
+                });
+
+                // Mean and safe limit lines
+                if(animPhase > 0.6){
+                    const meanX = RIGHT_AXIS.x + (meanThreshold - AXIS_MIN)/(AXIS_MAX-AXIS_MIN)*RIGHT_AXIS.w;
+                    ctx.strokeStyle = '#F0C060'; ctx.lineWidth=2;
+                    ctx.beginPath(); ctx.moveTo(meanX, RIGHT_AXIS.y); ctx.lineTo(meanX, RIGHT_AXIS.y+RIGHT_AXIS.h);
+                    ctx.stroke();
+                    ctx.fillStyle='#F0C060'; ctx.font='bold 12px'; ctx.textAlign='center';
+                    ctx.fillText(`Mean ${meanThreshold.toFixed(1)}%`, meanX, RIGHT_AXIS.y-30);
+
+                    const safeX = RIGHT_AXIS.x + (safeLimit - AXIS_MIN)/(AXIS_MAX-AXIS_MIN)*RIGHT_AXIS.w;
+                    ctx.strokeStyle = '#6ECF8A'; ctx.lineWidth=2;
+                    ctx.beginPath(); ctx.moveTo(safeX, RIGHT_AXIS.y); ctx.lineTo(safeX, RIGHT_AXIS.y+RIGHT_AXIS.h);
+                    ctx.stroke();
+                    ctx.fillStyle='#6ECF8A';
+                    ctx.fillText(`Safe ${safeLimit.toFixed(1)}%`, safeX, RIGHT_AXIS.y-46);
+                }
+
+                ctx.fillStyle='#8899B4'; ctx.font='400 13px';
+                ctx.fillText('→ funnel →', LEFT_BOX.x+LEFT_BOX.w+60, LEFT_BOX.y+LEFT_BOX.h/2);
+
+                // Bottom info
+                const infoY = H*0.88;
+                ctx.fillStyle='rgba(20,26,40,0.7)';
+                ctx.beginPath(); ctx.rect(60, infoY, W-120, 50); ctx.fill();
+                ctx.fillStyle='#CCD6E0'; ctx.font='400 13px';
+                const pctInside = totalSettled>0 ? (insideInterval/totalSettled*100).toFixed(0) : '—';
+                ctx.fillText(`95% of outcomes fall inside the highlighted band [6.75%, 14.78%] — currently: ${pctInside}% inside`, W/2, infoY+22);
+                ctx.fillText('Neupane, 2026 — Hollow Intelligence — JAIR', W/2, infoY+40);
+            }
+
+            function loop(ts){
+                if(!lastTime) lastTime=ts;
+                let dt = (ts-lastTime)/1000;
+                if(dt<=0) dt=0.016; if(dt>0.2) dt=0.2;
+                lastTime=ts;
+                update(dt);
+                draw();
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>

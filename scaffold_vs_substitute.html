@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI: Substitute or Scaffold? — Hollow Intelligence</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            background:#0a0d14; display:flex; justify-content:center; align-items:center;
+            height:100vh; overflow:hidden;
+            font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+            cursor:default;
+        }
+        canvas{display:block; max-width:100vw; max-height:100vh; cursor:default;}
+        .scrubbing canvas{cursor:ew-resize;}
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <script>
+        (()=>{
+            const canvas=document.getElementById('c');
+            const ctx=canvas.getContext('2d');
+            const BASE_W=1200, BASE_H=750;
+            let scale=1;
+            function resize(){
+                const dpr=Math.min(devicePixelRatio||1,2);
+                const aw=innerWidth, ah=innerHeight, a=BASE_W/BASE_H;
+                let w,h;
+                if(aw/ah>a){h=ah;w=h*a;}else{w=aw;h=w/a;}
+                scale=w/BASE_W; canvas.width=BASE_W*dpr; canvas.height=BASE_H*dpr;
+                canvas.style.width=w+'px'; canvas.style.height=h+'px';
+                ctx.setTransform(dpr,0,0,dpr,0,0);
+            }
+            window.addEventListener('resize',resize); resize();
+
+            const CYCLE_DURATION = 12;
+            let animPhase = 0, lastTime = null;
+            let paused = false;
+            let dragging = false;
+
+            const LEFT = {x:60, y:160, w:480, h:420};
+            const RIGHT = {x:660, y:160, w:480, h:420};
+            let leftParticles = [], rightParticles = [];
+            const MAX_PARTICLES = 60;
+
+            function easeOutExpo(t) { return t>=1?1:1-Math.pow(2,-10*t); }
+            function getStage(t) {
+                if (t < 0.33) return 0;
+                if (t < 0.66) return 1;
+                return 2;
+            }
+            function stageProgress(t) {
+                if (t < 0.33) return t / 0.33;
+                if (t < 0.66) return (t - 0.33) / 0.33;
+                return (t - 0.66) / 0.34;
+            }
+
+            class Particle {
+                constructor(startX, startY, endX, endY, ctrlX, ctrlY, life, color, size=2.5, fadeIn=false){
+                    this.startX=startX; this.startY=startY;
+                    this.endX=endX; this.endY=endY;
+                    this.ctrlX=ctrlX; this.ctrlY=ctrlY;
+                    this.life=life; this.maxLife=life; this.color=color; this.size=size;
+                    this.fadeIn = fadeIn;
+                    this.trail = [];
+                    this.t = 0;
+                }
+                update(dt){
+                    this.t += dt / this.maxLife;
+                    if (this.t > 1) this.t = 1;
+                    const t = this.t;
+                    const x = (1-t)*(1-t)*this.startX + 2*(1-t)*t*this.ctrlX + t*t*this.endX;
+                    const y = (1-t)*(1-t)*this.startY + 2*(1-t)*t*this.ctrlY + t*t*this.endY;
+                    this.trail.push({x, y});
+                    if (this.trail.length > 8) this.trail.shift();
+                    this.x = x; this.y = y;
+                    this.life -= dt;
+                }
+                get alpha(){
+                    let a = Math.max(0, this.life/this.maxLife);
+                    if (this.fadeIn && this.t < 0.15) a *= this.t / 0.15;
+                    return a;
+                }
+                get alive(){ return this.life>0; }
+            }
+
+            function spawnLeftParticle(fromX,fromY,toX,toY){
+                const ctrlX = (fromX+toX)/2 + (Math.random()-0.5)*60;
+                const ctrlY = (fromY+toY)/2 - 40 - Math.random()*30;
+                const life = 0.9 + Math.random()*1.4;
+                const color = `hsl(${Math.random()*10+10}, 70%, 60%)`;
+                leftParticles.push(new Particle(fromX,fromY,toX,toY,ctrlX,ctrlY,life,color,2.5,true));
+            }
+            function spawnRightParticle(fromX,fromY,toX,toY,blue=true){
+                const midX = (fromX+toX)/2 + (Math.random()-0.5)*70;
+                const midY = blue ? (fromY+toY)/2 - 40 - Math.random()*40 : (fromY+toY)/2 + 40 + Math.random()*40;
+                const hue = blue ? 210 : 140;
+                const color = `hsl(${hue}, 70%, 60%)`;
+                rightParticles.push(new Particle(fromX,fromY,toX,toY,midX,midY,0.9+Math.random()*1.3,color,2.5,true));
+            }
+
+            function drawRoundedRect(x,y,w,h,r){
+                ctx.beginPath();
+                ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+                ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+                ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+                ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+                ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+                ctx.closePath();
+            }
+            function drawGlowBar(x,y,w,h,color,alpha=1,glowSize=15){
+                ctx.save();
+                ctx.globalAlpha=alpha;
+                ctx.shadowColor=color; ctx.shadowBlur=glowSize;
+                ctx.fillStyle=color;
+                drawRoundedRect(x,y,w,h,4);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawSideBySideBars(areaX, areaY, areaW, areaH, Yval, Kval, side) {
+                const gap = 24;
+                const barW = (areaW - gap) / 2;
+                const bgColor = '#1c2533';
+                ctx.fillStyle = bgColor;
+                drawRoundedRect(areaX, areaY, areaW, areaH, 6);
+                ctx.fill();
+                const yH = Yval * areaH;
+                const yBarX = areaX;
+                const yBarY = areaY + areaH - yH;
+                drawGlowBar(yBarX, yBarY, barW, yH, '#ffd54f', 0.9, 18);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Y`, yBarX + barW/2, yBarY - 6);
+                ctx.fillText(`${Math.round(Yval*100)}%`, yBarX + barW/2, yBarY - 6 + 16);
+                const kH = Kval * areaH;
+                const kBarX = areaX + barW + gap;
+                const kBarY = areaY + areaH - kH;
+                drawGlowBar(kBarX, kBarY, barW, kH, '#4fc3f7', 0.9, 16);
+                ctx.fillText(`K`, kBarX + barW/2, kBarY - 6);
+                ctx.fillText(`${Math.round(Kval*100)}%`, kBarX + barW/2, kBarY - 6 + 16);
+                const gapVal = Yval - Kval;
+                if (gapVal > 0.05) {
+                    const gapY = areaY + areaH - Yval * areaH;
+                    const gapH = gapVal * areaH;
+                    ctx.fillStyle = 'rgba(255,100,100,0.25)';
+                    ctx.fillRect(areaX + barW + 4, gapY, gap-8, gapH);
+                    ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 12px'; ctx.textAlign = 'center';
+                    const label = `Gap (${Math.round(gapVal*100)}%)`;
+                    ctx.fillText(label, areaX + barW + gap/2, gapY + gapH/2 + 4);
+                } else if (side === 'right') {
+                    ctx.fillStyle = '#69f0ae'; ctx.font = 'bold 12px'; ctx.textAlign = 'center';
+                    ctx.fillText('Synced', areaX + barW + gap/2, areaY + areaH/2);
+                }
+            }
+
+            function drawScaffold(x, y, alpha, size=30){
+                if (alpha <= 0.01) return;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.strokeStyle = '#69f0ae';
+                ctx.lineWidth = 2;
+                ctx.shadowColor = '#69f0ae';
+                ctx.shadowBlur = 12;
+                for (let r=size*0.6; r<=size; r+=size*0.2) {
+                    ctx.beginPath();
+                    ctx.arc(x, y-22, r, 0, Math.PI*2);
+                    ctx.stroke();
+                }
+                ctx.beginPath();
+                ctx.moveTo(x-size, y-22); ctx.lineTo(x+size, y-22);
+                ctx.moveTo(x, y-22-size); ctx.lineTo(x, y-22+size);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function draw(){
+                const W=BASE_W, H=BASE_H;
+                ctx.clearRect(0,0,W,H);
+                const bg=ctx.createRadialGradient(W/2,H*0.4,30,W/2,H*0.4,W);
+                bg.addColorStop(0,'#141a26'); bg.addColorStop(0.8,'#0a0d14'); bg.addColorStop(1,'#05070a');
+                ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+                ctx.fillStyle='#f0f4f8';
+                ctx.font='600 34px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.textAlign='center';
+                ctx.fillText('AI: Substitute or Scaffold?', W/2, H*0.08);
+                ctx.fillStyle='#90a4ae';
+                ctx.font='400 17px "Segoe UI","Helvetica Neue",Arial,sans-serif';
+                ctx.fillText('Left: Passive offloading · Right: Predict → Feedback → Rebuild', W/2, H*0.13);
+
+                const t = animPhase;
+                const stage = getStage(t);
+                const prog = stageProgress(t);
+
+                // Left side
+                ctx.fillStyle='rgba(20,26,40,0.6)'; ctx.strokeStyle='rgba(255,90,90,0.25)';
+                ctx.beginPath(); ctx.rect(LEFT.x, LEFT.y, LEFT.w, LEFT.h); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#ff8a80'; ctx.font='600 18px'; ctx.textAlign='center';
+                ctx.fillText('Passive Substitution', LEFT.x+LEFT.w/2, LEFT.y-12);
+
+                const humLx=LEFT.x+100, humLy=LEFT.y+120;
+                const robLx=LEFT.x+LEFT.w-100, robLy=LEFT.y+120;
+
+                const humanScaleL = 1.6 - stage*0.3;
+                const humanMoodL = stage === 0 ? 'neutral' : 'sad';
+                const humanAlphaL = 1 - stage*0.25;
+                drawHuman(humLx, humLy, humanScaleL, humanMoodL, humanAlphaL);
+
+                const robotScaleL = 1.8 + stage*0.5;
+                const robotColorL = stage === 2 ? '#ff5252' : '#ff8a80';
+                drawRobot(robLx, robLy, robotScaleL, robotColorL);
+
+                ctx.strokeStyle='#ff8a80'; ctx.lineWidth=4; ctx.setLineDash([8,6]);
+                ctx.beginPath(); ctx.moveTo(humLx+40,humLy-20); ctx.lineTo(robLx-40,humLy-20);
+                ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle='#ff8a80'; ctx.font='13px';
+                ctx.fillText('Delegates everything', (humLx+robLx)/2, humLy-35);
+
+                let Kleft = 0.80 - easeOutExpo(t)*0.70;
+                let Yleft = 0.92 + 0.03*Math.sin(t*Math.PI*2);
+                Yleft = Math.max(0.88, Math.min(0.95, Yleft));
+                const barLx=LEFT.x+50, barLy=LEFT.y+250, barWl=LEFT.w-100, barHl=80;
+                drawSideBySideBars(barLx, barLy, barWl, barHl, Yleft, Kleft, 'left');
+
+                if(!paused && Math.random()<0.6 && leftParticles.length<MAX_PARTICLES){
+                    spawnLeftParticle(humLx,humLy-30, robLx,robLy-30);
+                }
+                updateParticles(leftParticles, 0.016);
+                drawParticles(leftParticles);
+
+                // Right side
+                ctx.fillStyle='rgba(20,26,40,0.6)'; ctx.strokeStyle='rgba(100,255,150,0.25)';
+                ctx.beginPath(); ctx.rect(RIGHT.x, RIGHT.y, RIGHT.w, RIGHT.h); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#69f0ae'; ctx.font='600 18px'; ctx.textAlign='center';
+                ctx.fillText('Active Scaffolding', RIGHT.x+RIGHT.w/2, RIGHT.y-12);
+
+                const humRx=RIGHT.x+100, humRy=RIGHT.y+120;
+                const robRx=RIGHT.x+RIGHT.w-100, robRy=RIGHT.y+120;
+
+                const humanScaleR = 1.6 + stage*0.3;
+                const humanMoodR = stage === 0 ? 'neutral' : 'happy';
+                const humanAlphaR = 1;
+                drawHuman(humRx, humRy, humanScaleR, humanMoodR, humanAlphaR);
+
+                const robotScaleR = 1.8 - stage*0.3;
+                const robotColorR = '#69f0ae';
+                drawRobot(robRx, robRy, robotScaleR, robotColorR);
+
+                ctx.strokeStyle='#69f0ae'; ctx.lineWidth=4;
+                ctx.beginPath(); ctx.moveTo(humRx+30,humRy-20); ctx.lineTo(robRx-30,humRy-20);
+                ctx.stroke();
+                ctx.strokeStyle='#69f0ae'; ctx.lineWidth=3; ctx.setLineDash([6,4]);
+                ctx.beginPath(); ctx.moveTo(robRx-30,humRy+20); ctx.lineTo(humRx+30,humRy+20);
+                ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle='#69f0ae'; ctx.font='13px';
+                ctx.fillText('Attempt first', (humRx+robRx)/2-10, humRy-35);
+                ctx.fillText('Feedback & rebuild', (humRx+robRx)/2+10, humRy+40);
+
+                let Kright = 0.45 + easeOutExpo(t)*0.40;
+                let Yright = 0.65 + easeOutExpo(t)*0.30;
+                const barRx=RIGHT.x+50, barRy=RIGHT.y+250, barWr=RIGHT.w-100, barHr=80;
+                drawSideBySideBars(barRx, barRy, barWr, barHr, Yright, Kright, 'right');
+
+                if(!paused && Math.random()<0.5 && rightParticles.length<MAX_PARTICLES){
+                    if(Math.random()<0.6) spawnRightParticle(humRx,humRy-30, robRx,robRy-30, true);
+                    else spawnRightParticle(robRx,robRy+20, humRx,humRy+20, false);
+                }
+                updateParticles(rightParticles, 0.016);
+                drawParticles(rightParticles);
+
+                const feedbackActive = rightParticles.some(p => p.endX === humRx && p.endY === humRy+20);
+                const scaffoldAlpha = feedbackActive ? 0.7 : 0.15 + stage*0.2;
+                drawScaffold(humRx, humRy, scaffoldAlpha, 28);
+
+                // Timeline
+                const tlY=H*0.85, tlX=100, tlW=W-200;
+                ctx.fillStyle='rgba(255,255,255,0.05)'; drawRoundedRect(tlX,tlY,tlW,6,3); ctx.fill();
+                const progX=tlX+t*tlW;
+                const grad=ctx.createLinearGradient(tlX,0,tlX+tlW,0);
+                grad.addColorStop(0,'#ff8a80'); grad.addColorStop(1,'#69f0ae');
+                ctx.fillStyle=grad; drawRoundedRect(tlX,tlY,progX-tlX,6,3); ctx.fill();
+                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(progX,tlY+3,9,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(progX,tlY+3,6,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle='#90a4ae'; ctx.font='12px'; ctx.textAlign='center';
+                ctx.fillText('Day 0', tlX, tlY+22); ctx.fillText('Year 5', tlX+tlW, tlY+22);
+
+                const stageNames = ['Erosion begins', 'Gap widens', 'Full divergence'];
+                ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='bold 13px'; ctx.textAlign='center';
+                ctx.fillText(stageNames[stage], W/2, tlY-12);
+
+                const btnX = W-90, btnY = 22, btnR = 16;
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath(); ctx.arc(btnX, btnY, btnR, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                if (paused) {
+                    ctx.beginPath(); ctx.moveTo(btnX-6, btnY-8); ctx.lineTo(btnX-6, btnY+8); ctx.lineTo(btnX+8, btnY); ctx.closePath(); ctx.fill();
+                } else {
+                    ctx.fillRect(btnX-7, btnY-8, 5, 16);
+                    ctx.fillRect(btnX+2, btnY-8, 5, 16);
+                }
+
+                ctx.fillStyle='rgba(20,26,40,0.7)';
+                ctx.beginPath(); ctx.rect(60, H*0.92, W-120, 44); ctx.fill();
+                ctx.fillStyle='#f0f4f8'; ctx.font='600 15px';
+                ctx.fillText('Preserve the learning loop: Predict → AI feedback → Rebuild independently — Hollow Intelligence is avoidable', W/2, H*0.92+18);
+                ctx.fillStyle='#90a4ae'; ctx.font='400 12px';
+                ctx.fillText('Neupane 2026 · JAIR', W/2, H*0.92+34);
+            }
+
+            function drawHuman(x,y,sc,mood='neutral', alpha=1){
+                ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc); ctx.globalAlpha = alpha;
+                ctx.fillStyle='#cfd8dc'; ctx.strokeStyle='#cfd8dc'; ctx.lineWidth=2.5;
+                ctx.beginPath(); ctx.arc(0,-22,12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(0,20); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,-2); ctx.lineTo(-16,14); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,-2); ctx.lineTo(16,14); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(-10,36); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(10,36); ctx.stroke();
+                ctx.fillStyle='#263238'; ctx.beginPath(); ctx.arc(-5,-24,2,0,Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(5,-24,2,0,Math.PI*2); ctx.fill();
+                if(mood==='sad'){
+                    ctx.beginPath(); ctx.arc(0,-16,4,0,Math.PI); ctx.stroke();
+                }else if(mood==='happy'){
+                    ctx.beginPath(); ctx.arc(0,-18,5,0,Math.PI); ctx.stroke();
+                }else{
+                    ctx.beginPath(); ctx.moveTo(-4,-18); ctx.lineTo(4,-18); ctx.stroke();
+                }
+                ctx.restore();
+            }
+            function drawRobot(x,y,sc,col='#90a4ae'){
+                ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
+                ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineWidth=2.5;
+                ctx.beginPath(); ctx.rect(-10,-22,20,20); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#0a0d14'; ctx.beginPath(); ctx.arc(-5,-14,2.5,0,Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(5,-14,2.5,0,Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(0,-30); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0,-32,3,0,Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.rect(-8,-2,16,24); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-8,8); ctx.lineTo(-20,18); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(8,8); ctx.lineTo(20,18); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-4,22); ctx.lineTo(-4,36); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(4,22); ctx.lineTo(4,36); ctx.stroke();
+                ctx.restore();
+            }
+
+            function updateParticles(arr, dt){
+                for(let i=arr.length-1;i>=0;i--){
+                    arr[i].update(dt);
+                    if(!arr[i].alive) arr.splice(i,1);
+                }
+            }
+            function drawParticles(arr){
+                arr.forEach(p=>{
+                    for (let i=0; i<p.trail.length; i++) {
+                        const pos = p.trail[i];
+                        const a = (i / p.trail.length) * p.alpha * 0.5;
+                        ctx.fillStyle = p.color.replace(')', `, ${a})`).replace('hsl','hsla');
+                        ctx.beginPath(); ctx.arc(pos.x, pos.y, p.size * (0.4 + 0.6 * i/p.trail.length), 0, Math.PI*2); ctx.fill();
+                    }
+                    ctx.fillStyle = p.color.replace(')', `, ${p.alpha})`).replace('hsl','hsla');
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                });
+            }
+
+            function update(dt){
+                if (paused) return;
+                animPhase += dt / CYCLE_DURATION;
+                if(animPhase>1.0) animPhase-=1.0;
+            }
+
+            function getBasePos(e){
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / scale;
+                const y = (e.clientY - rect.top) / scale;
+                return {x, y};
+            }
+
+            canvas.addEventListener('mousedown', (e)=>{
+                const pos = getBasePos(e);
+                const btnX = BASE_W-90, btnY = 22, btnR = 16;
+                const dist = Math.hypot(pos.x-btnX, pos.y-btnY);
+                if (dist <= btnR) {
+                    paused = !paused;
+                    return;
+                }
+                const tlY = BASE_H*0.85, tlX = 100, tlW = BASE_W-200;
+                if (pos.y >= tlY-20 && pos.y <= tlY+30 && pos.x >= tlX-10 && pos.x <= tlX+tlW+10) {
+                    dragging = true;
+                    animPhase = Math.max(0, Math.min(1, (pos.x - tlX) / tlW));
+                    paused = true;
+                    document.body.classList.add('scrubbing');
+                }
+            });
+            window.addEventListener('mousemove', (e)=>{
+                if (!dragging) return;
+                const pos = getBasePos(e);
+                const tlY = BASE_H*0.85, tlX = 100, tlW = BASE_W-200;
+                animPhase = Math.max(0, Math.min(1, (pos.x - tlX) / tlW));
+            });
+            window.addEventListener('mouseup', ()=>{
+                if (dragging) {
+                    dragging = false;
+                    document.body.classList.remove('scrubbing');
+                }
+            });
+
+            function loop(ts){
+                if(!lastTime) lastTime=ts;
+                let dt = (ts-lastTime)/1000;
+                if(dt<=0) dt=0.016; if(dt>0.2) dt=0.2;
+                lastTime=ts;
+                update(dt);
+                draw();
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>
